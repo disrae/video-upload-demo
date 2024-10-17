@@ -1,101 +1,112 @@
-import Image from "next/image";
+'use client'
+import { useEffect, useState } from "react";
+import MuxUploader from "@mux/mux-uploader-react";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "../firebase/firebaseConfig"; // Assuming you have a Firebase config file
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [uploadUrl, setUploadUrl] = useState<string | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [assetId, setAssetId] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  useEffect(() => {
+    const generateUploadUrl = async () => {
+      try {
+        const response = await fetch('/api/generate-upload-url', {
+          method: 'POST',
+        });
+        const {url, id} = await response.json() as {url: string, id: string};
+        setUploadUrl(url);
+        setAssetId(id);
+      } catch (error) {
+        console.error('Error generating upload URL:', error);
+      }
+    };
+
+    generateUploadUrl();
+  }, []);
+
+  const handleUploadSuccess = async (res: any) => {
+    console.log({res});
+    setUploadId(res.id);
+  };
+
+  const handleUploadComplete = (event: CustomEvent) => {
+    const { asset } = event.detail;
+    if (asset && asset.id) {
+      setAssetId(asset.id);
+      console.log('Upload complete. Asset ID:', asset.id);
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener('upload-complete' as any, handleUploadComplete);
+    return () => {
+      window.removeEventListener('upload-complete' as any, handleUploadComplete);
+    };
+  }, []);
+
+  const handleTagClick = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
+
+  const saveToFirestore = async () => {
+    if (!assetId || selectedTags.length === 0) return;
+
+    try {
+      await setDoc(doc(db, "videos", assetId), {
+        assetId,
+        tags: selectedTags,
+      });
+      console.log("Video saved to Firestore");
+    } catch (error) {
+      console.error("Error saving to Firestore:", error);
+    }
+  };
+
+  const tags = ["Life Insurance", "Single Trip", "Discovery", "For You Page"];
+
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Video Upload Dashboard</h1>
+      <div className="bg-gray-100 p-4 rounded-lg">
+        <h2 className="text-xl mb-2">Upload a Video</h2>
+        <MuxUploader endpoint={uploadUrl} onSuccess={handleUploadSuccess} />
+        {assetId && (
+          <div className="mt-4">
+            <p className="text-green-600">
+              Upload successful! Asset ID: {assetId}
+            </p>
+            <div className="mt-4">
+              <h3 className="text-lg font-semibold mb-2">Select Tags:</h3>
+              <div className="flex flex-wrap gap-2">
+                {tags.map(tag => (
+                  <button
+                    key={tag}
+                    onClick={() => handleTagClick(tag)}
+                    className={`px-3 py-1 rounded ${
+                      selectedTags.includes(tag)
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200 text-gray-700'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={saveToFirestore}
+              className="mt-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+              disabled={!assetId || selectedTags.length === 0}
+            >
+              Save to Firestore
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
