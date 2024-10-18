@@ -40,7 +40,6 @@ export default function Home() {
       }
       const asset = await response.json();
       saveToFirestore(asset.asset_id);
-      console.log('saving to firestore');
     } catch (error) {
       console.error('Error retrieving asset:', error);
     }
