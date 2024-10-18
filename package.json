@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@mux/mux-node": "^8.8.0",
     "@mux/mux-uploader": "^1.0.2",
     "@mux/mux-uploader-react": "^1.0.2",
     "firebase": "^10.14.1",
